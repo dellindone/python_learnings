@@ -1,0 +1,369 @@
+1) Async Website Health Monitor ⭐ (best choice)
+
+Build a tool that checks 100–500 websites concurrently.
+
+Features:
+
+send concurrent requests
+timeout after 3 sec
+retry failed sites
+show status:
+UP
+DOWN
+SLOW
+log response time
+save results to CSV
+check every 30 sec
+cancel gracefully with Ctrl+C
+
+Concepts learned:
+
+asyncio.gather
+Semaphore
+Queue
+cancellation
+periodic tasks
+producer/consumer
+
+Stretch goal:
+simple dashboard in terminal.
+
+Big picture
+Coroutine
+→ await
+→ Task
+→ gather
+→ Semaphore
+→ Queue
+→ timeout
+→ retry
+→ cancellation
+→ event loop understanding
+
+
+# ASYNCIO vs THREADING (Python Notes)
+## CORE IDEA
+
+threading  -> many OS threads
+asyncio    -> one thread, many tasks
+
+Difference:
+
+* Threading = concurrency using multiple threads managed by OS
+* AsyncIO = concurrency using one event loop that switches between tasks when they "await"
+
+1. THREADING
+
+---
+
+What it is:
+A program creates multiple threads that run concurrently.
+
+Example:
+import threading
+
+def work():
+...
+
+t1 = threading.Thread(target=work)
+t2 = threading.Thread(target=work)
+
+t1.start()
+t2.start()
+
+Now 2 threads run concurrently.
+
+How it works:
+OS scheduler controls switching:
+
+Thread A -> Thread B -> Thread C
+
+Programmer has little control over when switch happens.
+
+This is called:
+Preemptive Multitasking
+
+Pros:
+
+* Easy to understand initially
+* Good for blocking code
+* Useful for legacy libraries
+* Good for background workers
+
+Cons:
+
+* Heavy memory usage
+* Expensive context switching
+* Race conditions
+* Locks required
+* Debugging synchronization is hard
+
+Example race condition:
+counter += 1
+
+Two threads update same variable -> wrong result
+
+Need:
+threading.Lock()
+
+Mental model:
+Many chefs cooking in one kitchen:
+Chef1 cooking
+Chef2 cooking
+Chef3 cooking
+Chef4 cooking
+
+Many workers -> coordination needed
+
+---
+
+2. ASYNCIO
+
+---
+
+What it is:
+Single thread running many tasks.
+
+Example:
+import asyncio
+
+async def work():
+await asyncio.sleep(1)
+
+asyncio.run(work())
+
+How it works:
+Task pauses at:
+
+await something()
+
+Meaning:
+"I'm waiting — run another task."
+
+Event loop switches to another coroutine.
+
+This is called:
+Cooperative Multitasking
+
+Tasks voluntarily give control.
+
+Pros:
+
+* Lightweight
+* Very scalable
+* Excellent for I/O work
+* Less locking
+* Cleaner architecture
+* Can handle thousands of tasks
+
+Cons:
+
+* Learning curve
+* Must use async-compatible libraries
+* Bad for CPU-heavy work
+* Blocking calls freeze event loop
+
+Bad:
+time.sleep(5)
+
+Good:
+await asyncio.sleep(5)
+
+Mental model:
+One smart chef:
+
+Put rice to boil
+(waiting)
+
+Cut vegetables
+(waiting)
+
+Prepare sauce
+(waiting)
+
+Serve dish
+
+One worker -> efficient switching
+
+---
+
+3. CONTEXT SWITCHING
+
+---
+
+Threading:
+OS switches threads:
+
+Save Thread A state
+Load Thread B state
+Run Thread B
+
+Heavy operation.
+
+AsyncIO:
+Switch happens at:
+
+await
+
+Cheap operation.
+No OS thread switch.
+
+---
+
+4. SHARED STATE
+
+---
+
+Threading:
+Multiple threads modify same data.
+
+Need:
+
+* Lock
+* RLock
+* Condition
+* Semaphore
+
+Complex.
+
+AsyncIO:
+Usually single thread.
+
+Safer shared state.
+Fewer thread-safety problems.
+
+---
+
+5. PERFORMANCE
+
+---
+
+For I/O tasks:
+Examples:
+
+* HTTP requests
+* database queries
+* downloads
+* sockets
+* APIs
+
+Winner:
+AsyncIO
+
+Example:
+1000 HTTP requests
+
+Threading:
+1000 threads -> heavy
+
+AsyncIO:
+1000 coroutines -> lightweight
+
+For CPU tasks:
+Examples:
+
+* image processing
+* encryption
+* ML training
+* heavy loops
+
+Winner:
+Multiprocessing
+
+Why:
+CPU work does not await
+It blocks event loop
+
+---
+
+6. WHEN TO USE WHAT
+
+---
+
+Use AsyncIO for:
+
+* APIs
+* Web scraping
+* Bots
+* WebSockets
+* Async DB calls
+* Monitoring tools
+* Network-heavy apps
+
+Use Threading for:
+
+* Blocking libraries
+* GUI apps
+* Background workers
+* Legacy sync code
+
+Use Multiprocessing for:
+
+* CPU-heavy work
+
+---
+
+7. MEMORY TRICK
+
+---
+
+threading = many workers
+
+asyncio = one worker managing many waiting jobs
+
+OR
+
+threading = parallel workers
+asyncio = smart waiting
+
+---
+
+8. WEBSITE MONITOR PROJECT
+
+---
+
+Why AsyncIO?
+
+Checking websites means:
+
+send request
+wait
+receive response
+
+Most time is spent waiting on network.
+
+That is exactly what AsyncIO is built for.
+
+---
+
+## FINAL SUMMARY
+
+## THREADING
+
+Many OS threads
+Preemptive
+Heavyweight
+Locks needed
+Good for blocking code
+
+## ASYNCIO
+
+Single thread
+Cooperative
+Lightweight
+Scales well
+Best for I/O
+
+Rule of thumb:
+Waiting work -> AsyncIO
+Heavy compute -> Multiprocessing
+Legacy blocking code -> Threading
+
+
+Pydantic notes
+BaseModel
+validation
+model_dump()
+field types
+Literal / Enum
+serialization
