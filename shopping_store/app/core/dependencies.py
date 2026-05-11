@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.database import get_db
+from app.core.exceptions import ForbiddenException
 from app.models import Users
 from app.core.security import decode_token
 
@@ -37,3 +38,10 @@ async def get_current_user(
             detail="User is inactive",
         )
     return user
+
+def require_role(*roles: str):
+    async def role_checker(current_user: Users = Depends(get_current_user)):
+        if current_user.role not in [r.lower() for r in roles]:
+            raise ForbiddenException(f"User role '{current_user.role}', does not have access to this resource")
+        return current_user
+    return role_checker
