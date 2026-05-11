@@ -42,6 +42,6 @@ async def get_current_user(
 def require_role(*roles: str):
     async def role_checker(current_user: Users = Depends(get_current_user)):
         if current_user.role not in [r.lower() for r in roles]:
-            raise ForbiddenException(f"User role '{current_user.role}', does not have access to this resource")
+            raise ForbiddenException(f"User role is '{current_user.role.value}', does not have access to this resource")
         return current_user
     return role_checker
