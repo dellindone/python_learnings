@@ -16,8 +16,8 @@ class CategoryRepository:
         result = await db.execute(query)
         return result.scalars().all()
     
-    async def get_category_by_name(self, db: AsyncSession, name: str):
-        query = select(Category).where(Category.name == name)
+    async def get_category_by_name(self, db: AsyncSession, category_name: str):
+        query = select(Category).where(Category.name == category_name)
         result = await db.execute(query)
         return result.scalar_one_or_none()
     
@@ -38,3 +38,5 @@ class CategoryRepository:
     async def delete_category(self, db: AsyncSession, category: Category):
         await db.delete(category)
         await db.commit()
+
+category_repository = CategoryRepository()
