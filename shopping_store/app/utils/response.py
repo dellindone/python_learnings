@@ -2,7 +2,7 @@ from typing import Any
 
 def success(data: Any, message: str) -> dict:
     return {
-        "status": "True",
+        "status": True,
         "message": message,
         "data": data,
         "error_code": None,
@@ -10,7 +10,7 @@ def success(data: Any, message: str) -> dict:
 
 def error(message: str, error_code: str = "ERROR") -> dict:
     return {
-        "status": "False",
+        "status": False,
         "message": message,
         "data": None,
         "error_code": error_code,

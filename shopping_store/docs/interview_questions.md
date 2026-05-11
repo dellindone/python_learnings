@@ -13,8 +13,8 @@
 
 1. [Distributed Systems](#section-1--distributed-systems)
 2. [System Design — HLD](#section-2--system-design--hld-drive-the-conversation)
-3. [Database Internals](#section-3--database-internals--deep-dive)
-4. [Concurrency & Transactions](#section-4--concurrency--transactions)
+3. [Database Internals](#section-3--database-internals--deep-dive) *(includes Normalization & Relationships)*
+4. [Concurrency & Transactions](#section-4--concurrency--transactions) *(includes ACID)*
 5. [Python & Async Internals](#section-5--python--async-internals)
 6. [Architecture & Design Patterns](#section-6--architecture--design-patterns)
 7. [API Design](#section-7--api-design)
@@ -115,6 +115,20 @@
 
 ## Section 3 — Database Internals & Deep Dive
 
+### Normalization & Relationships
+1. What is database normalization? Why do we do it?
+2. What is 1NF (First Normal Form)? Give an example of a table that violates it.
+3. What is 2NF? What is a partial dependency? Give an example.
+4. What is 3NF? What is a transitive dependency? Give an example using a products table.
+5. What is BCNF (Boyce-Codd Normal Form)? How is it stricter than 3NF?
+6. When would you intentionally **denormalize** a table? What do you trade off?
+7. What is a One-to-Many relationship? Give an example from the shopping app. How is it implemented in SQL (foreign key)?
+8. What is a Many-to-Many relationship? Give an example. Why do you need a junction/association table?
+9. What is a One-to-One relationship? When would you split a table into two with a 1:1 relationship instead of keeping all columns together?
+10. What is referential integrity? What does `ON DELETE CASCADE` vs `ON DELETE RESTRICT` vs `ON DELETE SET NULL` do?
+11. `[POC]` Your `products` table has `category_id` as a foreign key. What happens if you try to delete a category that has 50 products? How do you handle this gracefully in the API?
+12. `[POC]` You have Products and Orders — a product can be in many orders, an order can have many products. What is the relationship type? Design the junction table with relevant columns (quantity, price at time of order). Why store price in the junction table?
+
 ### Storage Internals
 1. How does PostgreSQL store data on disk? What is a heap file? What is a page?
 2. What is a Write-Ahead Log (WAL)? Why must every change be written to WAL before the data file?
@@ -151,6 +165,16 @@
 ---
 
 ## Section 4 — Concurrency & Transactions
+
+### ACID Properties
+1. What does ACID stand for? Define each property in one sentence.
+2. What is Atomicity? Give a concrete example from the shopping app where atomicity matters. What happens if atomicity is violated?
+3. What is Consistency? Who is responsible for maintaining it — the database or the application?
+4. What is Isolation? Why is "full isolation" expensive? What does PostgreSQL give you by default?
+5. What is Durability? If a server crashes right after `COMMIT` returns success, is your data safe? What mechanism ensures this?
+6. `[MIND-BENDER]` ACID says transactions are Atomic — all or nothing. But your `register` flow had: `create_user` commit → `save_refresh_token` commit — two separate commits. Was this ACID? What specifically was violated and what real-world failure did it cause?
+7. `[MIND-BENDER]` Durability guarantees data survives a crash. But if your PostgreSQL server's disk itself fails (not just the process), is your committed data safe? What infrastructure do you need to truly guarantee durability?
+8. `[MIND-BENDER]` BASE (Basically Available, Soft state, Eventually consistent) is the opposite of ACID. Name one place in your shopping app where eventual consistency is acceptable and one place where it is absolutely not acceptable. Justify both.
 
 ### Isolation Levels Deep Dive
 1. Name all 4 SQL isolation levels in order from lowest to highest. What anomalies does each prevent?

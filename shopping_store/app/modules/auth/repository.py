@@ -20,7 +20,7 @@ class AuthRepository:
     async def create_user(self, db: AsyncSession, user: Users) -> Users:
         new_user = Users(**user.model_dump())
         db.add(new_user)
-        await db.commit()
+        await db.flush()
         await db.refresh(new_user)
         return new_user
     

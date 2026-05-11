@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.user import Users
+from app.schemas.auth import RefreshTokenRequest
 from app.modules.auth.repository import auth_repository
 from app.core.exceptions import ConflictException, UnauthorizedException
 from app.core.security import verify_password, hash_password, create_access_token, create_refresh_token
@@ -23,9 +24,13 @@ class AuthService:
             raise ConflictException("Email already registered")
 
         data.password = hash_password(data.password)
-        new_user = await auth_repository.create_user(db, data)
+        try:
+            new_user = await auth_repository.create_user(db, data)
+            access_token, refresh_token = await self._issue_tokens(db, new_user)
+        except Exception as e:
+            await db.rollback()
+            raise e
 
-        access_token, refresh_token = await self._issue_tokens(db, new_user)
         return access_token, refresh_token
     
     async def login(self, data: Users, db: AsyncSession) -> tuple[str, str]:
@@ -36,12 +41,12 @@ class AuthService:
         access_token, refresh_token = await self._issue_tokens(db, user)
         return access_token, refresh_token
 
-    async def refresh_token(self, refresh_token: str, db: AsyncSession) -> tuple[str, str]:
-        stored_token = await auth_repository.get_refresh_token(db, refresh_token)
+    async def refresh_token(self, refresh_token: RefreshTokenRequest, db: AsyncSession) -> tuple[str, str]:
+        stored_token = await auth_repository.get_refresh_token(db, refresh_token.refresh_token)
         if not stored_token:
             raise UnauthorizedException("Invalid refresh token")
         
-        if stored_token.expires_at < datetime.utcnow():
+        if stored_token.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
             await auth_repository.delete_refresh_token(db, refresh_token)
             raise UnauthorizedException("Refresh token expired")
         
