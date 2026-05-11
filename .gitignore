@@ -1,2 +1,10 @@
 .env
 .venv/
+*.ini
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite
+alembic/versions/
