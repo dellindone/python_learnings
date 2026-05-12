@@ -53,8 +53,8 @@ class ProductRepository:
         await db.refresh(product_data)
         return product_data
     
-    async def delete_product(self, db: AsyncSession, product_data: Product):
-        await db.delete(product_data)
+    async def delete_product(self, db: AsyncSession, product: Product):
+        await db.delete(product)
         await db.commit()
 
 product_repository = ProductRepository()
