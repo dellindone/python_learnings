@@ -52,3 +52,5 @@ class ProductService:
         product = await product_repository.get_product_by_id(db, product_id)
         if not product: raise NotFoundException("Product Not Found")
         await product_repository.delete_product(db, product)
+
+product_service = ProductService()
