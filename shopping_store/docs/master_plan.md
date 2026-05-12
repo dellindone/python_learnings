@@ -73,7 +73,7 @@ app/
 ├── modules/
 │   ├── auth/              ← DONE
 │   ├── users/             ← DONE
-│   ├── products/          ← Phase 2
+│   ├── products/          ← ✅ Done
 │   ├── cart/              ← Phase 3
 │   └── orders/            ← Phase 4
 │
@@ -89,10 +89,10 @@ app/
 |---|---|---|
 | 1 | Auth (register, login, logout, refresh token) | ✅ Done |
 | 1 | Users (get me, update me) | ✅ Done |
-| 2 | Products + Categories CRUD | 🔲 Next |
-| 2 | Admin product management | 🔲 |
-| 2 | Pagination + filtering | 🔲 |
-| 3 | Cart management | 🔲 |
+| 2 | Products + Categories CRUD | ✅ Done |
+| 2 | Admin product management | ✅ Done |
+| 2 | Pagination + filtering | 🔲 Pending |
+| 3 | Cart management | 🔲 Next |
 | 4 | Orders + Transactions | 🔲 |
 | 5 | Global error handling (review + harden) | 🔲 |
 | 6 | Rate limiting (Redis) | 🔲 |
@@ -720,7 +720,7 @@ All endpoints return this shape:
 }
 ```
 
-> Note: Your current `response.py` uses `"status": "True"` (a string) instead of `"success": true` (a boolean). Decide on one format and standardize it across the project before Phase 2.
+> Note: Response format standardized — both `response.py` and `exceptions.py` use `"status": true/false` (boolean). Fixed in Phase 1.
 
 ---
 
