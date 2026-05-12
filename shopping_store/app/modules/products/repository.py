@@ -18,8 +18,13 @@ class ProductRepository:
         result = await db.execute(query)
         return result.scalars().all()
     
-    async def get_product_by_name(self, db: AsyncSession, product_name: str) -> Product:
+    async def get_product_by_name(self, db: AsyncSession, product_name: str) -> list[Product]:
         query = select(Product).where(Product.name == product_name)
+        result = await db.execute(query)
+        return result.scalars().all()
+    
+    async def get_product_by_sku(self, db: AsyncSession, sku: str) -> Product:
+        query = select(Product).where(Product.sku == sku)
         result = await db.execute(query)
         return result.scalar_one_or_none()
     
@@ -36,7 +41,7 @@ class ProductRepository:
         return new_product
 
     async def update_product(self, db: AsyncSession, product_data: Product, update_product: UpdateProductRequest) -> Product:
-        for field, value in update_product.model_dump(exclude_unset=True): setattr(product_data, field, value)
+        for field, value in update_product.model_dump(exclude_unset=True).items(): setattr(product_data, field, value)
         await db.commit()
         await db.refresh(product_data)
         return product_data

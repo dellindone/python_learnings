@@ -19,7 +19,7 @@ async def get_all_products( db: AsyncSession) -> dict:
 async def get_product_by_name( db: AsyncSession, product_name: str) -> dict:
     data = await product_service.get_product_by_name(db, product_name)
     if not data: raise NotFoundException("Product not found by name..")
-    return success(data=data.model_dump(), message="Product Fetched Successfully..")
+    return success(data=[d.model_dump() for d in data], message="Product Fetched Successfully..")
 
 async def get_products_by_category_id( db: AsyncSession, category_id: UUID) -> dict:
     data = await product_service.get_products_by_category_id(db, category_id)
