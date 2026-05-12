@@ -1,7 +1,7 @@
 from uuid import UUID
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 
 class CartItemResponse(BaseModel):
@@ -16,7 +16,7 @@ class CartItemResponse(BaseModel):
 
 class AddToCartRequest(BaseModel):
     product_id: UUID
-    quantity: int
+    quantity: int = Field(gt=0, description="Quantity must be greater than 0")
 
 class UpdateCartItemRequest(BaseModel):
     quantity: Optional[int] = None

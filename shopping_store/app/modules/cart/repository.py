@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlalchemy import select, delete
 from uuid import UUID
 
@@ -7,7 +8,7 @@ from app.models.cart_item import CartItem
 
 class CartRepository:
     async def get_cart_by_user_id(self, db: AsyncSession, user_id: UUID):
-        query = select(Cart).where(Cart.user_id == user_id)
+        query = select(Cart).where(Cart.user_id == user_id).options(selectinload(Cart.items))
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
