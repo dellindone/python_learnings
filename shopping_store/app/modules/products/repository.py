@@ -13,6 +13,11 @@ class ProductRepository:
         result = await db.execute(query)
         return result.scalar_one_or_none()
     
+    async def get_active_product_by_id(self, db: AsyncSession, product_id: UUID) -> Product:
+        query = select(Product).where(Product.id == product_id, Product.is_active == True)
+        result = await db.execute(query)
+        return result.scalar_one_or_none()
+    
     async def get_all_products(self, db: AsyncSession) -> list[Product]:
         query = select(Product).where(Product.is_active == True)
         result = await db.execute(query)
