@@ -485,6 +485,78 @@ For your shopping app (monolith, single DB): BIGSERIAL is better for performance
 
 ---
 
+---
+
+### Phase 8 — DB Indexing (POC se directly linked)
+
+**Q: Seq Scan kya hota hai?**
+- DB har row ko ek ek karke padhta hai — table ka full scan
+- Small tables pe theek hai, 1M+ rows pe slow ho jaata hai
+- SQLite mein `EXPLAIN QUERY PLAN` mein `SCAN TABLE` dikhta hai = Seq Scan
+- Index add karne ke baad `SEARCH TABLE USING INDEX` dikhta hai
+
+**Q: Leftmost prefix rule kya hai?**
+- Composite index `(category_id, is_active, created_at)` ke liye:
+  - `WHERE category_id = ?` → index use hoga ✅
+  - `WHERE category_id = ? AND is_active = ?` → index use hoga ✅
+  - `WHERE category_id = ? AND is_active = ? AND created_at > ?` → index use hoga ✅
+  - `WHERE is_active = ?` → index use NAHI hoga ❌ (leftmost column skip kiya)
+  - `WHERE created_at > ?` → index use NAHI hoga ❌
+- Rule: Index tabhi use hoga jab query mein leftmost column zaroor ho
+
+**Q: Indexes writes kyun slow karte hain?**
+- Har INSERT/UPDATE/DELETE pe index bhi update karna padta hai
+- 5 indexes = 6 writes (1 data + 5 index updates) per row change
+- Write-heavy tables pe zyada indexes = performance hit
+- Read-heavy tables pe indexes = big win
+
+**Q: `(category_id, is_active, created_at)` index hai — `WHERE is_active = 1` query use karega?**
+- Nahi — leftmost prefix rule violate hota hai
+- `is_active` pehle column nahi hai, toh index skip hoga
+- Is case mein separate `idx_products_is_active` index use hoga
+
+**Q: Covering index kya hai?**
+- Jab query ke saare columns index mein hi hoon — table tak jaana nahi padta
+- Example: `SELECT id, category_id, is_active FROM products WHERE category_id = ?`
+- Index `(category_id, is_active)` — ye query sirf index se answer ho jaayegi, table read nahi hogi
+- "Index-only scan" kehte hain isko
+
+**Q: 100 rows wali table pe index faayda karta hai?**
+- Nahi — DB full scan faster hota hai chhoti table pe
+- Indexes ~10K+ rows pe meaningful hote hain
+- SQLite/PostgreSQL planner khud decide karta hai — chhoti table pe index ignore kar deta hai
+
+**Q: Index ki storage cost?**
+- Har index roughly data ka 10-30% extra storage leta hai
+- 1M rows, 3 indexes = data + ~60-90% overhead
+- Trade-off: read speed vs write speed vs storage
+
+**Q: PostgreSQL index ko kabhi ignore karta hai?**
+- Jab query bahut saari rows match karti ho (low selectivity)
+- Example: `WHERE is_active = true` aur 90% rows active hain — full scan faster
+- Planner statistics use karta hai decide karne ke liye
+- Generally <10% rows match = index scan, >30% rows match = seq scan
+
+**`[POC]` Tune kaunse indexes add kiye aur kyun:**
+```sql
+-- Products category se filter hoti hain — FK pe index
+CREATE INDEX idx_products_category_id ON products (category_id);
+
+-- Active products filter ke liye
+CREATE INDEX idx_products_is_active ON products (is_active);
+
+-- Composite — category + active + date sorted list query
+CREATE INDEX idx_products_category_active_created ON products (category_id, is_active, created_at);
+
+-- User ka order history sorted by date
+CREATE INDEX idx_orders_user_created ON orders (user_id, created_at DESC);
+
+-- Cart items lookup by cart + product
+CREATE INDEX idx_cart_items_cart_product ON cart_items (cart_id, product_id);
+```
+
+---
+
 ### Section 3 Resources
 
 | Resource | What to study | Where |
