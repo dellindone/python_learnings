@@ -24,24 +24,24 @@ class OrderService:
                 raise BadRequestException(f"{product.name} has only {product.stock_quantity}.")
             total_amount += product.price * item.quantity
 
-        async with db.begin():
-            order = await order_repository.create_order(db, user.id, total_amount)
+        order = await order_repository.create_order(db, user.id, total_amount)
+        for item in cart.items:
+            product = await product_repository.get_product_by_id(db, item.product_id)
 
-            for item in cart.items:
-                product = await product_repository.get_product_by_id(db, item.product_id)
-
-                await order_repository.create_order_item(
-                    db,
-                    order_id=order.id,
-                    product_id=item.product_id,
-                    product_name=product.name,
-                    unit_price=product.price,
-                    quantity=item.quantity,
-                    subtotal=product.price * item.quantity
-                )
-                product.stock_quantity -= item.quantity
-                await db.flush()
-            await cart_item_repository.clear_cart(db, cart_id=cart.id)
+            await order_repository.create_order_item(
+                db,
+                order_id=order.id,
+                product_id=item.product_id,
+                product_name=product.name,
+                unit_price=product.price,
+                quantity=item.quantity,
+                subtotal=product.price * item.quantity
+            )
+            product.stock_quantity -= item.quantity
+            await db.flush()
+        await cart_item_repository.clear_cart(db, cart_id=cart.id)
+        await db.commit()
+        order = await order_repository.get_order_by_id(db, order.id)
         return OrderResponse.model_validate(order)
     
     async def get_orders(self, db: AsyncSession, user: Users) -> list[OrderResponse]:
@@ -54,6 +54,12 @@ class OrderService:
         if order.user_id != user.id: raise ForbiddenException("Not your order")
         if order.status == OrderStatus.CANCELLED: raise BadRequestException("Order already cancelled")
         if order.status == OrderStatus.DELIVERED: raise BadRequestException("Delivered order cannot be cancelled")
+
+        for item in order.items:
+            product = await product_repository.get_product_by_id(order, item.product_id)
+            product.stock_quantity += item.quantity
+            await db.flush
+
         cancel_order = await order_repository.update_order_status(db, order, OrderStatus.CANCELLED)
         return OrderResponse.model_validate(cancel_order)
     
