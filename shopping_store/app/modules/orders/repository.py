@@ -12,8 +12,7 @@ class OrderRepository:
     async def create_order(self, db: AsyncSession, user_id: UUID, total_amount: Decimal) -> Order:
         order = Order(user_id=user_id,total_amount=total_amount)
         db.add(order)
-        await db.commit()
-        await db.refresh(order)
+        await db.flush()
         return order
 
     async def get_order_by_id(self, db: AsyncSession, order_id: UUID) -> Order:
@@ -31,8 +30,7 @@ class OrderRepository:
             subtotal=subtotal
         )
         db.add(order_item)
-        await db.commit()
-        await db.refresh(order_item)
+        await db.flush()
         return order_item
 
     async def get_orders_by_user_id(self, db: AsyncSession, user: Users) -> list[Order]:
