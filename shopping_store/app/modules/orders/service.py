@@ -23,6 +23,10 @@ class OrderService:
             if product.stock_quantity < item.quantity:
                 raise BadRequestException(f"{product.name} has only {product.stock_quantity}.")
             total_amount += product.price * item.quantity
+
+        order = await order_repository.create_order(db, user.id, total_amount)
+
+        for item in cart.items:
             product = await product_repository.get_product_by_id(db, item.product_id)
             await order_repository.create_order_item(
                 db,
@@ -35,10 +39,9 @@ class OrderService:
             )
             product.stock_quantity -= item.quantity
             await db.flush()
-        create_order = await order_repository.create_order(db, user.id, total_amount)
         await cart_item_repository.clear_cart(db, cart_id=cart.id)
         await db.commit()
-        order = await order_repository.get_order_by_id(db, create_order.id)
+        order = await order_repository.get_order_by_id(db, order.id)
         return OrderResponse.model_validate(order)
     
     async def get_orders(self, db: AsyncSession, user: Users) -> list[OrderResponse]:

@@ -1,6 +1,8 @@
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+from sqlalchemy.exc import IntegrityError
+
 class AppException(Exception):
     def __init__(self, message: str, status_code: int = 400, error_code:str = "APP_ERROR"):
         self.message = message
@@ -40,5 +42,16 @@ async def app_exception_handler(request: Request, exc: AppException):
             "status": False,
             "error_code": exc.error_code,
             "message": exc.message
+        }
+    )
+
+async def integrity_error_handler(request, exc):
+    return JSONResponse(
+        status_code=409,
+        content={
+            "data": None,
+            "status": False,
+            "message": "A conflict occurred. Please check your input.",
+            "error_code": "CONFLICT"
         }
     )

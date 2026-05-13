@@ -1,6 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, EmailStr, field_validator
 
 class UserProfileResponse(BaseModel):
     id: str
@@ -14,4 +13,11 @@ class UserProfileResponse(BaseModel):
 
 class UpdateUserRequest(BaseModel):
     name: str | None = None
-    phone: str | None = None
+    email: EmailStr | None = None
+    password: str | None = None
+
+    @field_validator("password")
+    def validate_password(cls, value):
+        if value is not None and len(value) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        return value

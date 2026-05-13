@@ -38,9 +38,9 @@ class CartService:
         if not user_cart_item: raise NotFoundException("CartItem not found")
         product = await product_repository.get_active_product_by_id(db, product_id)
         if not product: raise NotFoundException("Product not found or inactive")
-        if product.stock_quantity < (update_cart.quantity + user_cart_item.quantity):
+        if product.stock_quantity < (update_cart.quantity):
             raise BadRequestException(f"Insufficient stock.. Available stock {product.stock_quantity}")
-        updated_cart = await cart_item_repository.update_item_quantity(db, user_cart_item, user_cart_item.quantity + update_cart.quantity)
+        updated_cart = await cart_item_repository.update_item_quantity(db, user_cart_item, update_cart.quantity)
         return CartItemResponse.model_validate(updated_cart)
 
     async def remove_cart_item(self, db: AsyncSession, user: Users, product_id: UUID) -> None:

@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.core.exceptions import AppException, app_exception_handler
@@ -24,6 +25,15 @@ app = FastAPI(
     title="Shopping Store API",
     version=Settings().VERSION
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.add_exception_handler(AppException, app_exception_handler)
 
 app.include_router(auth_router)

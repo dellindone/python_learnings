@@ -8,3 +8,7 @@ __pycache__/
 *.db
 *.sqlite
 alembic/versions/
+.DS_Store
+._*
+node_modules/
+dist/
