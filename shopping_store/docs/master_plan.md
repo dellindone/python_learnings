@@ -92,9 +92,10 @@ app/
 | 2 | Products + Categories CRUD | ✅ Done |
 | 2 | Admin product management | ✅ Done |
 | 2 | Pagination + filtering | 🔲 Pending |
-| 3 | Cart management | 🔲 Next |
+| 3 | Cart management | ✅ Done |
+| 4 | Orders + Transactions | ✅ Done |
 | 4 | Orders + Transactions | 🔲 |
-| 5 | Global error handling (review + harden) | 🔲 |
+| 5 | Global error handling (review + harden) | 🔄 In Progress |
 | 6 | Rate limiting (Redis) | 🔲 |
 | 7 | Redis caching (products, categories) | 🔲 |
 | 8 | DB indexing + EXPLAIN ANALYZE | 🔲 |
