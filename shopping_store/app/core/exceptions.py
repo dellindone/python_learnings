@@ -1,6 +1,6 @@
 from fastapi import Request
 from fastapi.responses import JSONResponse
-
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import IntegrityError
 
 class AppException(Exception):
@@ -45,7 +45,7 @@ async def app_exception_handler(request: Request, exc: AppException):
         }
     )
 
-async def integrity_error_handler(request, exc):
+async def integrity_error_handler(request: Request, exc: IntegrityError):
     return JSONResponse(
         status_code=409,
         content={
@@ -53,5 +53,27 @@ async def integrity_error_handler(request, exc):
             "status": False,
             "message": "A conflict occurred. Please check your input.",
             "error_code": "CONFLICT"
+        }
+    )
+
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code = 500,
+        content = {
+            "data": None,
+            "status": False,
+            "message": "Something went wrong. Please try again later.",
+            "error_code": "INTERNAL_SERVER_ERROR"
+        }
+    )
+
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "data": None,
+            "status": False,
+            "message": str(exc.errors()[0]["msg"]),
+            "error_code": "VALIDATION_ERROR"
         }
     )

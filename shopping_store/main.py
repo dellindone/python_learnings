@@ -1,8 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+
 from contextlib import asynccontextmanager
 
-from app.core.exceptions import AppException, app_exception_handler
+from app.core.exceptions import (
+    AppException, app_exception_handler,
+    IntegrityError, integrity_error_handler,
+    unhandled_exception_handler,
+    validation_exception_handler
+)
 from app.core.database import engine, Base
 from app.core.config import Settings
 from app import models # Ensure models are imported to create tables
@@ -35,6 +42,9 @@ app.add_middleware(
 )
 
 app.add_exception_handler(AppException, app_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(IntegrityError, integrity_error_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 app.include_router(auth_router)
 app.include_router(users_router)
