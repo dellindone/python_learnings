@@ -1,54 +1,56 @@
 # Phase 5 — Global Error Handling
 
-## Problem Statement
+## Problems Fixed
 
-Teen issues the jo fix karne the:
-
-1. **SQLAlchemy `IntegrityError` leak** — Duplicate email insert karo toh raw DB error milti thi client ko
-2. **No catch-all handler** — Koi bhi unexpected exception = ugly 500 with internal details
-3. **Pydantic validation error format inconsistent** — FastAPI ka default 422 format alag tha, tera standard format alag
+- SQLAlchemy `IntegrityError` raw leak ho rahi thi client ko — table/column names expose hote the
+- Koi bhi unexpected exception = uncontrolled 500, no format
+- FastAPI ka default 422 format tera standard response format se alag tha
 
 ---
 
-## Standard Response Format (poore app mein yahi use hota hai)
+## Standard Response Format
+
+Poore app mein yahi structure — success aur error dono pe:
 
 ```json
 {
   "data": null,
   "status": false,
-  "message": "Error message here",
-  "error_code": "ERROR_CODE_HERE"
+  "message": "...",
+  "error_code": "..."
 }
 ```
 
-- `status` → boolean (True = success, False = error)
-- `error_code` → string constant, client isse programmatically handle kare
-- `data` → error pe always null
-- `message` → human readable
+- `status` — boolean, success=true / error=false
+- `error_code` — string constant, client programmatically isse handle kare
+- `data` — error pe always null
+- `message` — human readable, kabhi internal details nahi
 
 ---
 
-## Architecture — Exception Flow
+## Exception Flow
 
 ```
-Request aaya
-    ↓
-Router → Controller → Service → Repository
-                                    ↓
-                            DB se IntegrityError (ya koi bhi exception)
-                                    ↓
-                            FastAPI exception handler pakadta hai
-                                    ↓
-                            Standard JSON response client ko
+Request
+  → Router → Controller → Service → Repository → DB
+                                                   ↓
+                                          Exception raise hoti hai
+                                                   ↓
+                                    FastAPI — registered handler dhundta hai
+                                    (specific se broad order mein match karta hai)
+                                                   ↓
+                                          Standard JSON response
 ```
 
-**Rule:** Service layer mein custom `AppException` raise karo. DB errors repository se bubble up hoti hain — handler pakad leta hai.
+- Service layer mein hamesha custom `AppException` raise karo
+- DB errors (IntegrityError, etc.) repository se bubble up hoti hain — handler pakad leta hai
+- Koi bhi uncaught exception catch-all tak pahunchti hai
 
 ---
 
-## File: `app/core/exceptions.py`
+## `app/core/exceptions.py`
 
-### Custom Exception Classes (already the Phase 1 se)
+### AppException — Base Class
 
 ```python
 class AppException(Exception):
@@ -59,13 +61,13 @@ class AppException(Exception):
         super().__init__(message)
 ```
 
-Sab subclasses isi se inherit karti hain — `BadRequestException`, `NotFoundException`, `ConflictException`, etc.
-
-**Why custom exceptions?** `HTTPException` (FastAPI ka default) mein `error_code` nahi hota. Tera app consistent structured errors chahta tha.
+- FastAPI ka `HTTPException` use nahi kiya — usmein `error_code` nahi hota
+- Sab subclasses isi se inherit karti hain: `BadRequestException`, `NotFoundException`, `ConflictException`, etc.
+- HTTP status code exception class decide karti hai, service nahi — separation of concerns
 
 ---
 
-### Handler 1 — AppException Handler (Phase 1 se already tha)
+### Handler 1 — AppException (Phase 1 se)
 
 ```python
 async def app_exception_handler(request: Request, exc: AppException):
@@ -80,15 +82,14 @@ async def app_exception_handler(request: Request, exc: AppException):
     )
 ```
 
-**Kab chalega:** Jab service layer mein `raise NotFoundException(...)` ya koi bhi `AppException` subclass raise karo.
+- Triggers when: service `raise NotFoundException(...)` ya koi bhi `AppException` subclass raise kare
+- `exc` mein `status_code`, `error_code`, `message` teeno hote hain — isliye dynamic values use ki
 
 ---
 
-### Handler 2 — IntegrityError Handler (Phase 5 — naya)
+### Handler 2 — IntegrityError (Phase 5)
 
 ```python
-from sqlalchemy.exc import IntegrityError
-
 async def integrity_error_handler(request: Request, exc: IntegrityError):
     return JSONResponse(
         status_code=409,
@@ -101,21 +102,14 @@ async def integrity_error_handler(request: Request, exc: IntegrityError):
     )
 ```
 
-**Kab chalega:** Jab SQLAlchemy DB operation fail kare:
-- Duplicate email/username insert
-- Foreign key violation
-- NOT NULL constraint fail
-
-**Why hardcoded 409 and not `exc.status_code`?**
-`IntegrityError` SQLAlchemy ka exception hai — usmein `status_code` attribute hota hi nahi. Sirf tera `AppException` mein hota hai.
-
-**Why generic message?**
-`IntegrityError` ka actual message kuch aisa hota hai:
-`UNIQUE constraint failed: users.email` — internal table/column names leak hote hain. Client ko ye nahi dikhana.
+- Triggers when: DB UNIQUE/FK/NOT NULL constraint fail ho — duplicate email insert, invalid FK reference, etc.
+- `exc.status_code` nahi likha — `IntegrityError` SQLAlchemy ka class hai, usmein ye attribute hota hi nahi
+- Message generic rakha — actual error mein `UNIQUE constraint failed: users.email` hota hai, internal info leak hoti
+- Ye safety net hai — agar service ne pehle check nahi kiya aur DB directly fail kare
 
 ---
 
-### Handler 3 — Catch-All Handler (Phase 5 — naya)
+### Handler 3 — Catch-All (Phase 5)
 
 ```python
 async def unhandled_exception_handler(request: Request, exc: Exception):
@@ -131,19 +125,15 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     )
 ```
 
-**Kab chalega:** Koi bhi aisi exception jo baaki handlers ne nahi pakdi — programming bugs, network errors, etc.
-
-**Why `print`?** Abhi ke liye server-side log karo taaki debug kar sako. Production mein `logging` module use karenge (Phase 8+).
-
-**Why generic message?** Stack trace kabhi client ko mat do — security risk hai.
+- Triggers when: koi bhi exception jo baaki handlers ne nahi pakdi — programming bugs, DB connection drop, etc.
+- `print` abhi ke liye — Phase 11 (structured logging) mein proper `logger.error(exc)` se replace hoga
+- Stack trace kabhi client ko mat do — internal paths, library versions, DB schema expose hote hain
 
 ---
 
-### Handler 4 — Pydantic Validation Handler (Phase 5 — naya)
+### Handler 4 — RequestValidationError (Phase 5)
 
 ```python
-from fastapi.exceptions import RequestValidationError
-
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
         status_code=422,
@@ -156,66 +146,55 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 ```
 
-**Kab chalega:** Jab request body mein required field missing ho, ya wrong type ho.
-
-**`exc.errors()`** → list of all validation errors. `[0]` → pehli error. `["msg"]` → human readable message.
-
-**Why override FastAPI ka default?** FastAPI ka default 422 format alag hota hai — tera standard format `status`, `error_code`, `data` expect karta hai. Consistency ke liye override kiya.
+- Triggers when: request body mein required field missing ho, ya wrong type ho — Pydantic automatically raise karta hai
+- `exc.errors()` → list of all validation errors, `[0]["msg"]` → pehli error ka readable message
+- FastAPI ka default 422 format override kiya — uska format `{"detail": [...]}` hota hai, tera standard se alag
 
 ---
 
-## File: `main.py` — Registration
-
-**Order important hai — specific se broad:**
+## `main.py` — Registration Order
 
 ```python
-from fastapi.exceptions import RequestValidationError
-from sqlalchemy.exc import IntegrityError
-from app.core.exceptions import (
-    AppException, app_exception_handler,
-    integrity_error_handler,
-    unhandled_exception_handler,
-    validation_exception_handler
-)
-
-# Handlers register karo — specific pehle, broad baad mein
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(IntegrityError, integrity_error_handler)
 app.add_exception_handler(AppException, app_exception_handler)
-app.add_exception_handler(Exception, unhandled_exception_handler)  # catch-all — always last
+app.add_exception_handler(Exception, unhandled_exception_handler)  # always last
 ```
 
-**Why order matters?**
-FastAPI top-to-bottom match karta hai. Agar `Exception` pehle ho toh wo sab kuch pakad lega — specific handlers kabhi nahi chalenge.
+- Order: specific → broad — FastAPI first match pe rok deta hai
+- `Exception` sabse last — agar pehle hota toh baaki handlers kabhi nahi chalte
+- `AppException` subclasses bhi `app_exception_handler` se pakdi jaati hain — FastAPI MRO follow karta hai
 
 ---
 
-## Interview Checkpoint — Phase 5 Questions & Answers
+## Interview Checkpoints
 
-**Q1: `HTTPException` vs custom `AppException` — difference kya hai?**
-`HTTPException` FastAPI ka built-in hai — sirf `status_code` aur `detail` hota hai. Custom `AppException` mein `error_code` extra hai jo client-side programmatic handling ke liye use hota hai. Custom exceptions zyada structured aur consistent responses dete hain.
+**Q: `HTTPException` vs custom `AppException`?**
+`HTTPException` mein sirf `status_code` aur `detail` hota hai. Custom `AppException` mein `error_code` extra hai — client-side programmatic handling ke liye. Structured, consistent responses ke liye custom banana better hai.
 
-**Q2: HTTP status codes kaun decide kare — service ya exception class?**
-Exception class. Service ka kaam business logic hai — "user nahi mila" bolna. HTTP 404 ka decision `NotFoundException` class ka kaam hai. Separation of concerns.
+**Q: Status codes service mein decide karo ya exception class mein?**
+Exception class mein. Service ka kaam business logic hai — "user nahi mila" batana. 404 ka decision `NotFoundException` ka kaam hai. Ek responsibility, ek jagah.
 
-**Q3: Unhandled exception pe client ko kya milna chahiye — stack trace ya generic message?**
-Generic message. Stack trace mein internal file paths, library versions, DB schema details hoti hain — attacker ke liye goldmine. Server pe log karo, client ko generic 500 do.
+**Q: Client ko stack trace do ya generic message?**
+Generic message. Stack trace mein internal paths, library versions, DB schema hoti hai — attacker ke liye useful info. Server pe log karo, client ko generic 500 do.
 
-**Q4: 400 vs 422 difference?**
-- `400 Bad Request` → request semantically galat hai (business logic — jaise expired coupon)
-- `422 Unprocessable Entity` → request ka structure/format galat hai (Pydantic validation fail — jaise missing required field)
-FastAPI automatically 422 deta hai jab request body schema match nahi karta.
+**Q: 400 vs 422?**
+- `400` → request semantically galat (business logic — jaise insufficient balance)
+- `422` → request structure galat (Pydantic validation — jaise missing required field)
+FastAPI automatically 422 raise karta hai jab request body schema match nahi karta.
 
-**Q5: DB connection drop ho toh?**
-`sqlalchemy.exc.OperationalError` raise hoti hai. Catch-all handler pakad lega aur client ko generic 500 milega. Production mein retry logic aur connection pooling hoti hai.
+**Q: DB connection drop ho toh?**
+`sqlalchemy.exc.OperationalError` raise hoti hai. Catch-all pakad lega, client ko generic 500 milega. Production mein connection pooling aur retry logic hoti hai.
 
-**Q6: `NotFoundException` raise kiya but handler register nahi kiya — kya hoga?**
-`AppException` ka handler pakad lega — kyunki `NotFoundException` `AppException` ka subclass hai. FastAPI MRO (Method Resolution Order) follow karta hai.
+**Q: `NotFoundException` raise kiya, handler register nahi kiya — kya hoga?**
+`AppException` ka handler pakad lega — `NotFoundException` uska subclass hai. FastAPI inheritance chain follow karta hai.
 
 ---
 
-## Testing Kaise Karo
+## Test Results (Verified)
 
-**IntegrityError test:** Duplicate email se register karo — `409 CONFLICT` milna chahiye
-**Validation error test:** Request body mein required field miss karo — `422 VALIDATION_ERROR` milna chahiye
-**Catch-all test:** Temporarily kisi service mein `raise Exception("test")` likho — `500 INTERNAL_SERVER_ERROR` milna chahiye
+| Scenario | Handler | Response |
+|----------|---------|----------|
+| Required field missing | `validation_exception_handler` | `422 VALIDATION_ERROR` |
+| Duplicate email | `app_exception_handler` (via ConflictException) | `409 CONFLICT` |
+| `raise Exception("test")` | `unhandled_exception_handler` | `500 INTERNAL_SERVER_ERROR` |
