@@ -10,12 +10,15 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_role
 from app.schemas.product import CreateProductRequest, UpdateProductRequest
 
+from app.middlewares.rate_limiting import products_rate_limiter
+
 router = APIRouter(prefix="/products", tags=["products"])
 
 @router.get("/")
 async def get_all_products(
         _: Users = Depends(get_current_user),
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
+        __: None = Depends(products_rate_limiter)
 ):
     return await controller.get_all_products(db)
 
