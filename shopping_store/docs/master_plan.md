@@ -94,7 +94,6 @@ app/
 | 2 | Pagination + filtering | 🔲 Pending |
 | 3 | Cart management | ✅ Done |
 | 4 | Orders + Transactions | ✅ Done |
-| 4 | Orders + Transactions | 🔲 |
 | 5 | Global error handling (review + harden) | ✅ Done |
 | 6 | Rate limiting (Redis) | 🔲 |
 | 7 | Redis caching (products, categories) | 🔲 |
