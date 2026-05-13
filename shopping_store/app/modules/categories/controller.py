@@ -9,7 +9,7 @@ from app.schemas.category import CreateCategoryRequest, UpdateCategoryRequest
 async def get_category_by_id(db: AsyncSession, category_id: UUID) -> dict:
     data = await category_service.get_category_by_id(db, category_id)
     if not data: raise NotFoundException("Category not found by id..")
-    return success(data=data.model_dump(), message="Category Fetched Successfully..")
+    return success(data=data, message="Category Fetched Successfully..")
 
 async def get_category_by_name(db: AsyncSession, category_name: str) -> dict:
     data = await category_service.get_category_by_name(db, category_name)
@@ -19,7 +19,7 @@ async def get_category_by_name(db: AsyncSession, category_name: str) -> dict:
 async def get_all_categories(db: AsyncSession) -> dict:
     data = await category_service.get_all_categories(db)
     if not data: return success(data=[], message="No categories found")
-    return success(data=[d.model_dump() for d in data], message="Category Fetched Successfully..")
+    return success(data=data, message="Category Fetched Successfully..")
 
 async def create_category(db: AsyncSession, category_data: CreateCategoryRequest) -> dict:
     data = await category_service.create_category(db, category_data)

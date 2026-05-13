@@ -96,7 +96,7 @@ app/
 | 4 | Orders + Transactions | ✅ Done |
 | 5 | Global error handling (review + harden) | ✅ Done |
 | 6 | Rate limiting (Redis) | ✅ Done |
-| 7 | Redis caching (products, categories) | 🔲 |
+| 7 | Redis caching (products, categories) | ✅ Done |
 | 8 | DB indexing + EXPLAIN ANALYZE | 🔲 |
 | 9 | Query optimization (N+1, pagination) | 🔲 |
 | 10 | Background workers (email, stock release) | 🔲 |

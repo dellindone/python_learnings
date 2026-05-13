@@ -10,11 +10,11 @@ from app.schemas.product import CreateProductRequest, UpdateProductRequest
 async def get_product_by_id( db: AsyncSession, product_id: UUID) -> dict:
     data = await product_service.get_product_by_id(db, product_id)
     if not data: raise NotFoundException("Product not found by id..")
-    return success(data=data.model_dump(), message="Product Fetched Successfully..")
+    return success(data=data, message="Product Fetched Successfully..")
 
 async def get_all_products( db: AsyncSession) -> dict:
     data = await product_service.get_all_products(db)
-    return success(data=[d.model_dump() for d in data], message="Product Fetched Successfully..")
+    return success(data=data, message="Product Fetched Successfully..")
 
 async def get_product_by_name( db: AsyncSession, product_name: str) -> dict:
     data = await product_service.get_product_by_name(db, product_name)
