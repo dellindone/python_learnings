@@ -1,3 +1,4 @@
+import tracemalloc
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -10,6 +11,8 @@ from app.core.exceptions import (
     unhandled_exception_handler,
     validation_exception_handler
 )
+from app.middlewares.memory_profiling import MemoryProfilingMiddleware
+
 from app.core.database import engine, Base
 from app.core.config import Settings
 from app import models # Ensure models are imported to create tables
@@ -23,6 +26,7 @@ from app.modules.orders.router import router as order_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    tracemalloc.start()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -33,6 +37,7 @@ app = FastAPI(
     version=Settings().VERSION
 )
 
+app.add_middleware(MemoryProfilingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
